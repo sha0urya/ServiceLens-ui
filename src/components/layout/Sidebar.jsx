@@ -1,9 +1,10 @@
 import { NavLink } from 'react-router-dom';
-import { MessageSquare, Database, Search, Code2, PanelLeftClose, PanelLeft } from 'lucide-react';
+import { MessageSquare, Database, Search, Code2, PanelLeftClose, PanelLeft, Layers } from 'lucide-react';
 
 const links = [
   { to: '/', label: 'Ask', icon: MessageSquare },
   { to: '/ingest', label: 'Ingestion', icon: Database },
+  { to: '/services', label: 'Services', icon: Layers },
   { to: '/explore', label: 'Explorer', icon: Search },
 ];
 

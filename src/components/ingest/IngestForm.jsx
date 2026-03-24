@@ -1,6 +1,15 @@
-import { FolderOpen, Server, Loader2 } from 'lucide-react';
+import { FolderOpen, Server, RefreshCw, Loader2, Info } from 'lucide-react';
 
-export default function IngestForm({ repoPath, serviceName, onRepoPathChange, onServiceNameChange, mode, onModeChange, onSubmit, loading }) {
+export default function IngestForm({
+  repoPath,
+  serviceName,
+  onRepoPathChange,
+  onServiceNameChange,
+  force,
+  onForceChange,
+  onSubmit,
+  loading,
+}) {
   const handleSubmit = (e) => {
     e.preventDefault();
     onSubmit();
@@ -36,46 +45,63 @@ export default function IngestForm({ repoPath, serviceName, onRepoPathChange, on
         </div>
       </div>
 
-      <div>
-        <label className="block text-sm font-medium text-gray-300 mb-1.5">Ingestion Mode</label>
-        <div className="flex rounded-lg border border-gray-700 overflow-hidden">
-          <button
-            type="button"
-            onClick={() => onModeChange('full')}
-            className={`flex-1 py-2.5 text-sm font-medium transition-colors ${
-              mode === 'full'
-                ? 'bg-indigo-500/20 text-indigo-400 border-r border-indigo-500/30'
-                : 'bg-gray-800 text-gray-400 hover:text-gray-200 border-r border-gray-700'
-            }`}
-          >
-            Full Ingest
-          </button>
-          <button
-            type="button"
-            onClick={() => onModeChange('incremental')}
-            className={`flex-1 py-2.5 text-sm font-medium transition-colors ${
-              mode === 'incremental'
-                ? 'bg-indigo-500/20 text-indigo-400'
-                : 'bg-gray-800 text-gray-400 hover:text-gray-200'
-            }`}
-          >
-            Incremental
-          </button>
+      {/* Strategy info */}
+      <div className="p-3 bg-gray-800/60 border border-gray-700/60 rounded-lg space-y-1.5">
+        <div className="flex items-center gap-1.5 text-xs font-medium text-gray-400 mb-2">
+          <Info size={13} />
+          Strategy is auto-selected by the backend
+        </div>
+        <div className="flex items-center gap-2 text-xs text-gray-500">
+          <span className="px-1.5 py-0.5 bg-emerald-500/10 text-emerald-400 rounded font-medium">FRESH</span>
+          <span>First-time ingest — full pipeline</span>
+        </div>
+        <div className="flex items-center gap-2 text-xs text-gray-500">
+          <span className="px-1.5 py-0.5 bg-blue-500/10 text-blue-400 rounded font-medium">INCREMENTAL</span>
+          <span>Already registered — changed files only (~32× faster)</span>
+        </div>
+        <div className="flex items-center gap-2 text-xs text-gray-500">
+          <span className="px-1.5 py-0.5 bg-amber-500/10 text-amber-400 rounded font-medium">FORCE FULL</span>
+          <span>Registered + force flag — purge &amp; re-index everything</span>
         </div>
       </div>
+
+      {/* Force toggle */}
+      <label className="flex items-center gap-3 cursor-pointer group">
+        <div className="relative">
+          <input
+            type="checkbox"
+            checked={force}
+            onChange={(e) => onForceChange(e.target.checked)}
+            className="sr-only peer"
+          />
+          <div className="w-9 h-5 bg-gray-700 peer-checked:bg-amber-500/80 rounded-full transition-colors peer-focus:ring-2 peer-focus:ring-amber-500/40" />
+          <div className="absolute top-0.5 left-0.5 w-4 h-4 bg-white rounded-full transition-all peer-checked:translate-x-4 shadow" />
+        </div>
+        <div>
+          <span className="text-sm font-medium text-gray-300 group-hover:text-gray-100 transition-colors flex items-center gap-1.5">
+            <RefreshCw size={13} className={force ? 'text-amber-400' : 'text-gray-500'} />
+            Force full re-ingest
+          </span>
+          <p className="text-xs text-gray-500 mt-0.5">Clears all existing data and re-indexes from scratch</p>
+        </div>
+      </label>
 
       <button
         type="submit"
         disabled={loading || !repoPath.trim() || !serviceName.trim()}
-        className="w-full flex items-center justify-center gap-2 py-2.5 px-4 bg-indigo-600 hover:bg-indigo-500 disabled:bg-gray-700 disabled:text-gray-500 text-white text-sm font-medium rounded-lg transition-colors"
+        className={`w-full flex items-center justify-center gap-2 py-2.5 px-4 text-white text-sm font-medium rounded-lg transition-colors disabled:bg-gray-700 disabled:text-gray-500 ${
+          force
+            ? 'bg-amber-600 hover:bg-amber-500'
+            : 'bg-indigo-600 hover:bg-indigo-500'
+        }`}
       >
         {loading ? (
           <>
             <Loader2 size={16} className="animate-spin" />
-            {mode === 'full' ? 'Ingesting...' : 'Scanning changes...'}
+            {force ? 'Re-indexing everything...' : 'Ingesting...'}
           </>
         ) : (
-          mode === 'full' ? 'Start Full Ingestion' : 'Run Incremental Scan'
+          force ? 'Force Full Re-ingest' : 'Run Ingest'
         )}
       </button>
     </form>

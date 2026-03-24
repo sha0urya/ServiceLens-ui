@@ -3,6 +3,7 @@ import AppLayout from './components/layout/AppLayout';
 import AskPage from './pages/AskPage';
 import IngestPage from './pages/IngestPage';
 import ExplorePage from './pages/ExplorePage';
+import ServicesPage from './pages/ServicesPage';
 
 export default function App() {
   return (
@@ -11,6 +12,7 @@ export default function App() {
         <Route element={<AppLayout />}>
           <Route index element={<AskPage />} />
           <Route path="ingest" element={<IngestPage />} />
+          <Route path="services" element={<ServicesPage />} />
           <Route path="explore" element={<ExplorePage />} />
         </Route>
       </Routes>

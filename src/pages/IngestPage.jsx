@@ -1,10 +1,10 @@
 import { useState, useEffect } from 'react';
-import { Database, CheckCircle, AlertCircle } from 'lucide-react';
+import { Database, CheckCircle, AlertCircle, Zap, RefreshCw, Sparkles } from 'lucide-react';
 import IngestForm from '../components/ingest/IngestForm';
 import FullIngestResult from '../components/ingest/FullIngestResult';
 import IncrementalResult from '../components/ingest/IncrementalResult';
 import LoadingSpinner from '../components/shared/LoadingSpinner';
-import { ingestFull, ingestIncremental } from '../api/servicelens';
+import { ingest } from '../api/servicelens';
 
 function useLocalState(key, initial) {
   const [val, setVal] = useState(() => localStorage.getItem(key) ?? initial);
@@ -12,31 +12,77 @@ function useLocalState(key, initial) {
   return [val, setVal];
 }
 
+/**
+ * Detects which strategy the backend used by inspecting response fields:
+ *   INCREMENTAL response has `added`, `modified`, `deleted`, `unchanged`
+ *   FRESH / FORCE_FULL response has `totalCodeChunks`, `totalClasses`, etc.
+ */
+function detectResultType(res) {
+  if (res == null) return null;
+  return 'added' in res ? 'incremental' : 'full';
+}
+
+const STRATEGY_META = {
+  incremental: {
+    label: 'Incremental scan',
+    icon: Zap,
+    color: 'text-blue-400',
+    bg: 'bg-blue-500/10',
+    border: 'border-blue-500/20',
+    loading: 'Scanning for changes...',
+  },
+  full: {
+    label: 'Full ingestion',
+    icon: Sparkles,
+    color: 'text-emerald-400',
+    bg: 'bg-emerald-500/10',
+    border: 'border-emerald-500/20',
+    loading: 'Ingesting repository… This may take a few minutes.',
+  },
+  force: {
+    label: 'Force full re-ingest',
+    icon: RefreshCw,
+    color: 'text-amber-400',
+    bg: 'bg-amber-500/10',
+    border: 'border-amber-500/20',
+    loading: 'Purging existing data and re-indexing… This may take a few minutes.',
+  },
+};
+
 export default function IngestPage() {
   const [repoPath, setRepoPath] = useLocalState('sl-repoPath', '');
   const [serviceName, setServiceName] = useLocalState('sl-serviceName', '');
-  const [mode, setMode] = useState('full');
+  const [force, setForce] = useState(false);
   const [loading, setLoading] = useState(false);
   const [result, setResult] = useState(null);
-  const [resultMode, setResultMode] = useState(null);
+  const [resultType, setResultType] = useState(null);   // 'full' | 'incremental'
+  const [usedForce, setUsedForce] = useState(false);    // was force=true when submitted?
   const [error, setError] = useState(null);
 
   const handleSubmit = async () => {
     setLoading(true);
     setError(null);
     setResult(null);
+    setUsedForce(force);
     try {
-      const res = mode === 'full'
-        ? await ingestFull(repoPath, serviceName)
-        : await ingestIncremental(repoPath, serviceName);
+      const res = await ingest(repoPath, serviceName, force);
       setResult(res);
-      setResultMode(mode);
+      setResultType(detectResultType(res));
     } catch (err) {
       setError(err.message);
     } finally {
       setLoading(false);
     }
   };
+
+  // Which strategy meta to show in loading / success banner
+  const strategyKey = loading
+    ? (usedForce ? 'force' : 'full')   // we don't know the actual strategy yet while loading
+    : resultType === 'incremental'
+      ? 'incremental'
+      : (usedForce ? 'force' : 'full');
+
+  const meta = STRATEGY_META[strategyKey] ?? STRATEGY_META.full;
 
   return (
     <div className="max-w-5xl mx-auto px-6 py-8">
@@ -46,7 +92,9 @@ export default function IngestPage() {
         </div>
         <div>
           <h1 className="text-xl font-semibold text-gray-100">Ingestion</h1>
-          <p className="text-sm text-gray-400">Ingest or re-ingest a service repository</p>
+          <p className="text-sm text-gray-400">
+            Strategy is auto-selected — FRESH, INCREMENTAL, or FORCE_FULL
+          </p>
         </div>
       </div>
 
@@ -58,8 +106,8 @@ export default function IngestPage() {
               serviceName={serviceName}
               onRepoPathChange={setRepoPath}
               onServiceNameChange={setServiceName}
-              mode={mode}
-              onModeChange={setMode}
+              force={force}
+              onForceChange={setForce}
               onSubmit={handleSubmit}
               loading={loading}
             />
@@ -68,7 +116,7 @@ export default function IngestPage() {
 
         <div>
           {loading && (
-            <LoadingSpinner message={mode === 'full' ? 'Ingesting repository... This may take a few minutes.' : 'Scanning for changes...'} />
+            <LoadingSpinner message={force ? STRATEGY_META.force.loading : STRATEGY_META.full.loading} />
           )}
 
           {error && (
@@ -83,13 +131,17 @@ export default function IngestPage() {
 
           {result && !loading && (
             <div>
-              <div className="flex items-center gap-2 mb-4">
-                <CheckCircle size={16} className="text-emerald-400" />
-                <span className="text-sm font-medium text-emerald-400">
-                  {resultMode === 'full' ? 'Full ingestion' : 'Incremental scan'} complete for {result.serviceName}
+              <div className={`flex items-center gap-2 mb-4 px-3 py-2 ${meta.bg} border ${meta.border} rounded-lg`}>
+                <CheckCircle size={15} className={meta.color} />
+                <meta.icon size={14} className={meta.color} />
+                <span className={`text-sm font-medium ${meta.color}`}>
+                  {meta.label} complete
                 </span>
+                {result.serviceName && (
+                  <span className="text-sm text-gray-400">— {result.serviceName}</span>
+                )}
               </div>
-              {resultMode === 'full' ? (
+              {resultType === 'full' ? (
                 <FullIngestResult result={result} />
               ) : (
                 <IncrementalResult result={result} />
@@ -101,6 +153,9 @@ export default function IngestPage() {
             <div className="flex flex-col items-center justify-center py-16 text-gray-500">
               <Database size={40} className="mb-3 opacity-30" />
               <p className="text-sm">Configure and run an ingestion to see results</p>
+              <p className="text-xs mt-1 text-gray-600">
+                Strategy (FRESH / INCREMENTAL / FORCE_FULL) is selected automatically
+              </p>
             </div>
           )}
         </div>
