@@ -17,6 +17,19 @@ export default function AskPage() {
   const [error, setError] = useState(null);
   const messagesEndRef = useRef(null);
   const inputRef = useRef(null);
+  const prevServiceRef = useRef(serviceName);
+
+  // When the user switches to a different service, clear the chat history.
+  // The backend session for the new service will be created automatically on
+  // the next query (the per-service sessionId lives in localStorage keyed by
+  // service name, so no explicit reset is needed there).
+  useEffect(() => {
+    if (prevServiceRef.current !== serviceName) {
+      setMessages([]);
+      setError(null);
+      prevServiceRef.current = serviceName;
+    }
+  }, [serviceName]);
 
   const scrollToBottom = () => {
     messagesEndRef.current?.scrollIntoView({ behavior: 'smooth' });

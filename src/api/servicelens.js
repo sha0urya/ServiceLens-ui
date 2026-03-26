@@ -78,10 +78,28 @@ export function queryIntent(query, serviceName) {
   });
 }
 
+/**
+ * Send a query to the /api/ask endpoint with automatic session management.
+ *
+ * On the first call for a service, no sessionId is sent → backend creates a new
+ * session and returns its UUID. On subsequent calls the stored sessionId is sent
+ * back so the backend can inject prior conversation turns as context for the LLM.
+ *
+ * Sessions are stored per service in localStorage under the key `sl-session-{serviceName}`.
+ * Changing the service name automatically starts a fresh session without any extra logic.
+ */
 export function ask(query, serviceName, signal) {
+  const sessionKey = `sl-session-${serviceName}`;
+  const sessionId  = localStorage.getItem(sessionKey);
+
   return request(`${BASE}/ask`, {
     method: 'POST',
-    body: JSON.stringify({ query, serviceName }),
+    body: JSON.stringify({ query, serviceName, sessionId: sessionId || null }),
     signal,
+  }).then((data) => {
+    if (data.sessionId) {
+      localStorage.setItem(sessionKey, data.sessionId);
+    }
+    return data;
   });
 }
