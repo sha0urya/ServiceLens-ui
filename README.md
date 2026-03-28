@@ -146,12 +146,12 @@ All backend calls go through `src/api/servicelens.js`. In development, Vite prox
 | `listServices()` | GET | `/api/services` | ServicesPage |
 | `getService(serviceName)` | GET | `/api/services/{name}` | ServicesPage |
 | `deleteService(serviceName)` | DELETE | `/api/services/{name}` | ServicesPage |
-| `ask(query, serviceName, signal)` | POST | `/api/ask` | AskPage |
+| `ask(query, serviceName, verbosity, signal)` | POST | `/api/ask` | AskPage |
 | `retrieve(query, serviceName, topK)` | GET | `/api/retrieve` | ExplorePage |
 | `queryIntent(query, serviceName)` | POST | `/api/query` | (available, unused in UI) |
 
 `ingest()` sends `force` as a string (`"true"` / `"false"`) to match the backend's request mapping.
-`ask()` accepts an optional `AbortSignal` for request cancellation.
+`ask()` accepts a `verbosity` parameter (`'SHORT'` | `'DETAILED'` | `'DEEP_DIVE'`, default `'DETAILED'`) and an optional `AbortSignal` for request cancellation.
 
 To point the app at a different backend URL, update the proxy in `vite.config.js`:
 
@@ -173,7 +173,7 @@ No external state library. All state is local to pages using React hooks.
 - `useEffect` — auto-scroll to latest chat message, localStorage sync, toast auto-dismiss
 - `useCallback` — stable `load` reference in ServicesPage to avoid duplicate fetches
 - `useRef` — message container ref for scroll control
-- localStorage — persists `sl-serviceName`, `sl-repoPath`, sidebar collapsed state across page reloads
+- localStorage — persists `sl-serviceName`, `sl-repoPath`, `sl-verbosity`, sidebar collapsed state, and `sl-session-{serviceName}` (conversation session ID per service) across page reloads
 
 ---
 
