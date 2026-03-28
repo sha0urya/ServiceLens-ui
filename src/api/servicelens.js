@@ -87,14 +87,19 @@ export function queryIntent(query, serviceName) {
  *
  * Sessions are stored per service in localStorage under the key `sl-session-{serviceName}`.
  * Changing the service name automatically starts a fresh session without any extra logic.
+ *
+ * @param {string} query       - the user's question
+ * @param {string} serviceName - the ingested service to query against
+ * @param {string} verbosity   - 'SHORT' | 'DETAILED' | 'DEEP_DIVE' (default: 'DETAILED')
+ * @param {AbortSignal} signal - optional abort signal
  */
-export function ask(query, serviceName, signal) {
+export function ask(query, serviceName, verbosity = 'DETAILED', signal) {
   const sessionKey = `sl-session-${serviceName}`;
   const sessionId  = localStorage.getItem(sessionKey);
 
   return request(`${BASE}/ask`, {
     method: 'POST',
-    body: JSON.stringify({ query, serviceName, sessionId: sessionId || null }),
+    body: JSON.stringify({ query, serviceName, sessionId: sessionId || null, verbosity }),
     signal,
   }).then((data) => {
     if (data.sessionId) {

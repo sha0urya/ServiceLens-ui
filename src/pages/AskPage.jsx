@@ -3,6 +3,12 @@ import { Send, Server, MessageSquare, AlertCircle } from 'lucide-react';
 import ChatMessage from '../components/ask/ChatMessage';
 import { ask } from '../api/servicelens';
 
+const VERBOSITY_OPTIONS = [
+  { value: 'SHORT',     label: 'Quick',     title: '3-5 sentences, no formatting' },
+  { value: 'DETAILED',  label: 'Standard',  title: 'Numbered steps, sections (default)' },
+  { value: 'DEEP_DIVE', label: 'Deep Dive', title: 'Edge cases, related classes, full depth' },
+];
+
 function useLocalState(key, initial) {
   const [val, setVal] = useState(() => localStorage.getItem(key) ?? initial);
   useEffect(() => { localStorage.setItem(key, val); }, [key, val]);
@@ -11,6 +17,7 @@ function useLocalState(key, initial) {
 
 export default function AskPage() {
   const [serviceName, setServiceName] = useLocalState('sl-serviceName', '');
+  const [verbosity, setVerbosity] = useLocalState('sl-verbosity', 'DETAILED');
   const [query, setQuery] = useState('');
   const [messages, setMessages] = useState([]);
   const [loading, setLoading] = useState(false);
@@ -50,7 +57,7 @@ export default function AskPage() {
     setError(null);
 
     try {
-      const res = await ask(userMsg.query, serviceName);
+      const res = await ask(userMsg.query, serviceName, verbosity);
       setMessages((prev) =>
         prev.map((msg, i) =>
           i === prev.length - 1 ? { ...msg, response: res, timestamp: new Date() } : msg
@@ -136,6 +143,24 @@ export default function AskPage() {
 
       {/* Input */}
       <div className="px-6 py-4 border-t border-gray-800 bg-gray-900/50">
+        {/* Verbosity toggle */}
+        <div className="flex items-center gap-1 mb-3">
+          {VERBOSITY_OPTIONS.map((opt) => (
+            <button
+              key={opt.value}
+              type="button"
+              title={opt.title}
+              onClick={() => setVerbosity(opt.value)}
+              className={`px-3 py-1 rounded-lg text-xs font-medium transition-colors ${
+                verbosity === opt.value
+                  ? 'bg-indigo-600 text-white'
+                  : 'bg-gray-800 text-gray-400 hover:text-gray-200 hover:bg-gray-700'
+              }`}
+            >
+              {opt.label}
+            </button>
+          ))}
+        </div>
         <form onSubmit={handleSubmit} className="flex items-center gap-3">
           <input
             ref={inputRef}
